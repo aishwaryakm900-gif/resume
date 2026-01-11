@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- html2pdf Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Playfair+Display:wght@400;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Animation utilities */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Watermark Style */
+        .watermark {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            user-select: none;
+        }
+        /* Dark mode watermark override if needed in specific templates */
+        .dark-mode .watermark { border-color: #334155; color: #64748b; }
+    </style>
+</head>
+<body class="bg-slate-100 h-screen w-full flex overflow-hidden text-slate-800">
+
+    <!-- LEFT SIDEBAR: EDITOR -->
+    <div id="editor-sidebar" class="w-full md:w-[450px] flex flex-col bg-white border-r border-slate-200 shadow-xl z-10 h-full transition-transform duration-300 absolute md:relative -translate-x-full md:translate-x-0">
+        
+        <!-- Header -->
+        <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+            <div class="flex items-center gap-2 text-indigo-600">
+                <i data-lucide="layout"></i>
+                <h1 class="text-xl font-bold text-slate-800">Portfolio Builder</h1>
+            </div>
+            <button id="close-mobile-sidebar" class="md:hidden text-slate-500"><i data-lucide="x"></i></button>
+        </div>
+
+        <!-- Template Selector -->
+        <div class="p-4 bg-slate-50 border-b border-slate-200">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Choose Template</label>
+            <div class="grid grid-cols-5 gap-2">
+                <button onclick="setTemplate('minimal')" id="btn-minimal" class="template-btn p-2 text-xs rounded border text-center transition-all bg-white border-indigo-500 text-indigo-600 shadow-sm ring-1 ring-indigo-500">Minimal</button>
+                <button onclick="setTemplate('bold')" id="btn-bold" class="template-btn p-2 text-xs rounded border text-center transition-all border-slate-200 text-slate-600 hover:bg-slate-100">Bold</button>
+                <button onclick="setTemplate('corporate')" id="btn-corporate" class="template-btn p-2 text-xs rounded border text-center transition-all border-slate-200 text-slate-600 hover:bg-slate-100">Classic</button>
+                <button onclick="setTemplate('creative')" id="btn-creative" class="template-btn p-2 text-xs rounded border text-center transition-all border-slate-200 text-slate-600 hover:bg-slate-100">Creative</button>
+                <button onclick="setTemplate('academic')" id="btn-academic" class="template-btn p-2 text-xs rounded border text-center transition-all border-slate-200 text-slate-600 hover:bg-slate-100">Academic</button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-slate-200 bg-white sticky top-0 z-20 overflow-x-auto">
+            <button onclick="setTab('personal')" id="tab-personal" class="tab-btn flex-shrink-0 flex-1 min-w-[70px] py-3 text-xs font-bold uppercase tracking-wide border-b-2 border-indigo-600 text-indigo-600">Personal</button>
+            <button onclick="setTab('skills')" id="tab-skills" class="tab-btn flex-shrink-0 flex-1 min-w-[70px] py-3 text-xs font-bold uppercase tracking-wide border-b-2 border-transparent text-slate-400 hover:text-slate-600">Skills</button>
+            <button onclick="setTab('experience')" id="tab-experience" class="tab-btn flex-shrink-0 flex-1 min-w-[70px] py-3 text-xs font-bold uppercase tracking-wide border-b-2 border-transparent text-slate-400 hover:text-slate-600">Exp</button>
+            <button onclick="setTab('projects')" id="tab-projects" class="tab-btn flex-shrink-0 flex-1 min-w-[70px] py-3 text-xs font-bold uppercase tracking-wide border-b-2 border-transparent text-slate-400 hover:text-slate-600">Projects</button>
+            <button onclick="setTab('design')" id="tab-design" class="tab-btn flex-shrink-0 flex-1 min-w-[70px] py-3 text-xs font-bold uppercase tracking-wide border-b-2 border-transparent text-amber-500 hover:text-amber-600"><i data-lucide="settings-2" width="14" class="inline mb-0.5"></i> Design</button>
+        </div>
+
+        <!-- Form Container -->
+        <div id="form-container" class="flex-1 overflow-y-auto p-6 space-y-6 bg-white pb-24">
+            <!-- Forms injected by JS -->
+        </div>
+    </div>
+
+    <!-- MOBILE TOGGLE BUTTON -->
+    <button id="mobile-menu-btn" class="md:hidden fixed bottom-6 right-6 z-50 bg-indigo-600 text-white p-4 rounded-full shadow-lg flex items-center justify-center" onclick="toggleMobileSidebar()">
+        <i data-lucide="edit-3"></i>
+    </button>
+
+    <!-- RIGHT PREVIEW AREA -->
+    <div id="preview-wrapper" class="flex-1 relative bg-slate-200/50 overflow-hidden flex flex-col">
+        
+        <!-- Toolbar -->
+        <div class="absolute top-4 right-4 z-40 flex gap-2 pointer-events-none">
+            <button onclick="downloadPDF()" id="download-btn" class="pointer-events-auto flex items-center gap-2 bg-indigo-600 text-white px-6 py-2 rounded shadow-lg hover:bg-indigo-700 transition-colors font-medium text-sm">
+                <i data-lucide="download" width="16"></i> Download PDF
+            </button>
+        </div>
+
+        <!-- Scrollable Canvas -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-12 flex justify-center items-start">
+            <div id="preview-container" class="w-full max-w-[210mm] min-h-[297mm] bg-white shadow-2xl transition-all">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- INITIAL STATE ---
+        const INITIAL_DATA = {
+            fullName: "Alex Morgan",
+            title: "Full Stack Developer",
+            email: "alex@example.com",
+            phone: "+1 (555) 012-3456",
+            location: "San Francisco, CA",
+            linkedin: "linkedin.com/in/alexmorgan",
+            github: "github.com/alexmorgan",
+            website: "alexmorgan.dev",
+            bio: "Passionate developer with 5+ years of experience in building scalable web applications. I love solving complex problems and learning new technologies. Dedicated to writing clean, maintainable code.",
+            skills: "React, Node.js, TypeScript, Python, Tailwind CSS, AWS, PostgreSQL, Docker",
+            experience: [
+                { id: 1, role: "Senior Frontend Engineer", company: "TechFlow Solutions", duration: "2021 - Present", description: "Led the migration of a legacy monolith to a micro-frontend architecture using React and Module Federation. Improved site performance by 40%." },
+                { id: 2, role: "Web Developer", company: "Creative Agency", duration: "2019 - 2021", description: "Developed responsive websites for diverse clients. Collaborated with designers to implement pixel-perfect UIs." }
+            ],
+            projects: [
+                { id: 1, name: "E-Commerce Dashboard", tech: "React, Recharts, Firebase", description: "A real-time analytics dashboard for online store owners to track sales and inventory." },
+                { id: 2, name: "TaskMaster App", tech: "React Native, Node.js", description: "Cross-platform mobile application for project management and team collaboration." }
+            ],
+            // Dynamic Design Config
+            config: {
+                primaryColor: "#4f46e5", // Indigo-600
+                accentColor: "#f59e0b", // Amber-500
+                textColor: "#1e293b", // Slate-800
+                baseFontSize: 16,
+                nameSize: 48,
+                sectionSpacing: 40,
+                sidebarWidth: 30, // Percentage for sidebars
+                borderRadius: 4
+            }
+        };
+
+        let appData = JSON.parse(JSON.stringify(INITIAL_DATA));
+        let currentTemplate = 'minimal';
+        let currentTab = 'personal';
+
+        // --- RENDER FUNCTIONS ---
+
+        function renderForms() {
+            const container = document.getElementById('form-container');
+            container.innerHTML = '';
+
+            if (currentTab === 'personal') {
+                container.innerHTML = `
+                    <div class="space-y-4 fade-in">
+                        ${renderInput('Full Name', 'fullName')}
+                        ${renderInput('Professional Title', 'title')}
+                        ${renderTextarea('Bio / Summary', 'bio', 4)}
+                        <div class="grid grid-cols-2 gap-4">
+                            ${renderInput('Email', 'email')}
+                            ${renderInput('Phone', 'phone')}
+                        </div>
+                        ${renderInput('Location', 'location')}
+                        <div class="pt-4 border-t border-slate-100">
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Social Links</label>
+                            <div class="space-y-2">
+                                ${renderInputWithIcon('linkedin', 'LinkedIn URL', 'linkedin')}
+                                ${renderInputWithIcon('github', 'GitHub URL', 'github')}
+                                ${renderInputWithIcon('globe', 'Website URL', 'website')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentTab === 'skills') {
+                container.innerHTML = `
+                    <div class="space-y-4 fade-in">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Skills (Comma separated)</label>
+                            <textarea oninput="updateField('skills', this.value)" class="w-full p-3 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm leading-relaxed" rows="6">${appData.skills}</textarea>
+                            <p class="text-xs text-slate-500 mt-2">Tip: List your hard and soft skills separated by commas.</p>
+                        </div>
+                    </div>
+                `;
+            } else if (currentTab === 'experience') {
+                let html = `<div class="space-y-6 fade-in">`;
+                appData.experience.forEach((exp, index) => {
+                    html += `
+                        <div class="p-4 border border-slate-200 rounded bg-slate-50 relative group">
+                            <button onclick="removeExperience(${exp.id})" class="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-500 transition-colors" title="Remove"><i data-lucide="trash-2" width="16"></i></button>
+                            <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">Role #${index + 1}</h3>
+                            <div class="space-y-3">
+                                <input placeholder="Job Role" value="${exp.role}" oninput="updateExperience(${exp.id}, 'role', this.value)" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input placeholder="Company" value="${exp.company}" oninput="updateExperience(${exp.id}, 'company', this.value)" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                                    <input placeholder="Duration" value="${exp.duration}" oninput="updateExperience(${exp.id}, 'duration', this.value)" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                                </div>
+                                <textarea placeholder="Description..." rows="3" oninput="updateExperience(${exp.id}, 'description', this.value)" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm">${exp.description}</textarea>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `
+                    <button onclick="addExperience()" class="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center justify-center gap-2 font-medium text-sm">
+                        <i data-lucide="plus" width="18"></i> Add Experience
+                    </button>
+                </div>`;
+                container.innerHTML = html;
+            } else if (currentTab === 'projects') {
+                let html = `<div class="space-y-6 fade-in">`;
+                appData.projects.forEach((proj, index) => {
+                    html += `
+                        <div class="p-4 border border-slate-200 rounded bg-slate-50 relative group">
+                            <button onclick="removeProject(${proj.id})" class="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-500 transition-colors" title="Remove"><i data-lucide="trash-2" width="16"></i></button>
+                            <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">Project #${index + 1}</h3>
+                            <div class="space-y-3">
+                                <input placeholder="Project Name" value="${proj.name}" oninput="updateProject(${proj.id}, 'name', this.value)" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium">
+                                <input placeholder="Tech Stack" value="${proj.tech}" oninput="updateProject(${proj.id}, 'tech', this.value)" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                                <textarea placeholder="Description..." rows="3" oninput="updateProject(${proj.id}, 'description', this.value)" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm">${proj.description}</textarea>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `
+                    <button onclick="addProject()" class="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center justify-center gap-2 font-medium text-sm">
+                        <i data-lucide="plus" width="18"></i> Add Project
+                    </button>
+                </div>`;
+                container.innerHTML = html;
+            } else if (currentTab === 'design') {
+                // New Design Tab for Dynamic Resizing
+                container.innerHTML = `
+                    <div class="space-y-6 fade-in">
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">Colors</h3>
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-700 mb-1">Primary Color</label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="color" value="${appData.config.primaryColor}" oninput="updateConfig('primaryColor', this.value)" class="h-8 w-8 rounded cursor-pointer border-0">
+                                            <input type="text" value="${appData.config.primaryColor}" oninput="updateConfig('primaryColor', this.value)" class="w-full p-1 border border-slate-300 rounded text-xs">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-700 mb-1">Accent Color</label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="color" value="${appData.config.accentColor}" oninput="updateConfig('accentColor', this.value)" class="h-8 w-8 rounded cursor-pointer border-0">
+                                            <input type="text" value="${appData.config.accentColor}" oninput="updateConfig('accentColor', this.value)" class="w-full p-1 border border-slate-300 rounded text-xs">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-700 mb-1">Text Color</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="color" value="${appData.config.textColor}" oninput="updateConfig('textColor', this.value)" class="h-8 w-8 rounded cursor-pointer border-0">
+                                        <input type="text" value="${appData.config.textColor}" oninput="updateConfig('textColor', this.value)" class="w-full p-1 border border-slate-300 rounded text-xs">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">Typography & Spacing</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-700 mb-1 flex justify-between">
+                                        <span>Base Font Size (px)</span>
+                                        <span class="text-indigo-600 font-bold">${appData.config.baseFontSize}px</span>
+                                    </label>
+                                    <input type="range" min="12" max="24" step="1" value="${appData.config.baseFontSize}" oninput="updateConfig('baseFontSize', this.value)" class="w-full accent-indigo-600">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-700 mb-1 flex justify-between">
+                                        <span>Name/Title Size (px)</span>
+                                        <span class="text-indigo-600 font-bold">${appData.config.nameSize}px</span>
+                                    </label>
+                                    <input type="number" value="${appData.config.nameSize}" oninput="updateConfig('nameSize', this.value)" class="w-full p-2 border border-slate-300 rounded text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-700 mb-1 flex justify-between">
+                                        <span>Section Spacing (px)</span>
+                                        <span class="text-indigo-600 font-bold">${appData.config.sectionSpacing}px</span>
+                                    </label>
+                                    <input type="number" value="${appData.config.sectionSpacing}" oninput="updateConfig('sectionSpacing', this.value)" class="w-full p-2 border border-slate-300 rounded text-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">Layout Dimensions</h3>
+                             <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-700 mb-1 flex justify-between">
+                                        <span>Sidebar Width (%)</span>
+                                        <span class="text-indigo-600 font-bold">${appData.config.sidebarWidth}%</span>
+                                    </label>
+                                    <input type="range" min="20" max="50" step="1" value="${appData.config.sidebarWidth}" oninput="updateConfig('sidebarWidth', this.value)" class="w-full accent-indigo-600">
+                                    <p class="text-[10px] text-slate-400 mt-1">Applies to Corporate & Bold templates only.</p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-700 mb-1">Border Radius (px)</label>
+                                    <input type="number" value="${appData.config.borderRadius}" oninput="updateConfig('borderRadius', this.value)" class="w-full p-2 border border-slate-300 rounded text-sm">
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function renderInput(label, key) {
+            return `
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">${label}</label>
+                    <input type="text" value="${appData[key]}" oninput="updateField('${key}', this.value)" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+            `;
+        }
+
+        function renderTextarea(label, key, rows) {
+            return `
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">${label}</label>
+                    <textarea rows="${rows}" oninput="updateField('${key}', this.value)" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm">${appData[key]}</textarea>
+                </div>
+            `;
+        }
+
+        function renderInputWithIcon(iconName, placeholder, key) {
+            return `
+                <div class="flex items-center gap-2">
+                    <i data-lucide="${iconName}" class="text-slate-400" width="16"></i>
+                    <input placeholder="${placeholder}" type="text" value="${appData[key]}" oninput="updateField('${key}', this.value)" class="flex-1 p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                </div>
+            `;
+        }
+
+        // --- PREVIEW RENDERER ---
+
+        function renderPreview() {
+            const container = document.getElementById('preview-container');
+            const skillsList = appData.skills.split(',').map(s => s.trim()).filter(s => s);
+            const { primaryColor, accentColor, textColor, baseFontSize, nameSize, sectionSpacing, sidebarWidth, borderRadius } = appData.config;
+
+            // Common Styles Injection for Dynamic Resizing
+            const dynamicStyle = `
+                font-size: ${baseFontSize}px;
+                --primary: ${primaryColor};
+                --accent: ${accentColor};
+                --text-main: ${textColor};
+                --spacing: ${sectionSpacing}px;
+                --sidebar-w: ${sidebarWidth}%;
+                --radius: ${borderRadius}px;
+            `;
+
+            let templateHTML = '';
+            
+            // Shared watermark element
+            const watermark = `<div class="watermark">Made by Astro</div>`;
+
+            if (currentTemplate === 'minimal') {
+                templateHTML = `
+                    <div style="${dynamicStyle}; color: var(--text-main)" class="w-full h-full bg-white p-16 relative">
+                        <header class="text-center border-b border-slate-200 pb-8" style="margin-bottom: var(--spacing)">
+                            <h1 style="font-size: ${nameSize}px; color: var(--primary)" class="font-light tracking-tight mb-2 uppercase">${appData.fullName}</h1>
+                            <p class="text-xl text-slate-500 font-light mb-6">${appData.title}</p>
+                            <div class="flex flex-wrap justify-center gap-4 text-sm text-slate-500">
+                                ${appData.email ? `<span>${appData.email}</span>` : ''}
+                                ${appData.phone ? `<span>• ${appData.phone}</span>` : ''}
+                                ${appData.location ? `<span>• ${appData.location}</span>` : ''}
+                            </div>
+                            <div class="flex justify-center gap-4 mt-4 text-slate-500">
+                                ${appData.linkedin ? `<div class="text-xs bg-slate-100 px-2 py-1 rounded flex items-center gap-1">LN: ${appData.linkedin}</div>` : ''}
+                                ${appData.github ? `<div class="text-xs bg-slate-100 px-2 py-1 rounded flex items-center gap-1">GH: ${appData.github}</div>` : ''}
+                                ${appData.website ? `<div class="text-xs bg-slate-100 px-2 py-1 rounded flex items-center gap-1">WEB: ${appData.website}</div>` : ''}
+                            </div>
+                        </header>
+
+                        <section style="margin-bottom: var(--spacing)" class="max-w-2xl mx-auto text-center">
+                            <h2 style="color: var(--accent)" class="text-xs font-bold uppercase tracking-widest mb-4">About Me</h2>
+                            <p class="leading-relaxed text-inherit">${appData.bio}</p>
+                        </section>
+
+                        <section style="margin-bottom: var(--spacing)">
+                            <h2 style="color: var(--accent)" class="text-xs font-bold uppercase tracking-widest mb-6 text-center">Experience</h2>
+                            <div class="space-y-8">
+                                ${appData.experience.map(exp => `
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div class="text-sm text-slate-500 md:text-right">${exp.duration}</div>
+                                        <div class="md:col-span-3">
+                                            <h3 class="font-semibold text-lg" style="color: var(--primary)">${exp.role}</h3>
+                                            <div class="text-slate-600 mb-2 font-medium">${exp.company}</div>
+                                            <p class="text-sm text-inherit leading-relaxed">${exp.description}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </section>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <section>
+                                <h2 style="color: var(--accent)" class="text-xs font-bold uppercase tracking-widest mb-6 text-center md:text-left">Projects</h2>
+                                <div class="space-y-6">
+                                    ${appData.projects.map(proj => `
+                                        <div class="bg-slate-50 p-4" style="border-radius: var(--radius)">
+                                            <h3 class="font-bold text-inherit">${proj.name}</h3>
+                                            <p class="text-xs text-slate-500 mb-2 font-mono">${proj.tech}</p>
+                                            <p class="text-sm text-inherit">${proj.description}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 style="color: var(--accent)" class="text-xs font-bold uppercase tracking-widest mb-6 text-center md:text-left">Skills</h2>
+                                <div class="flex flex-wrap gap-2">
+                                    ${skillsList.map(skill => `<span class="px-3 py-1 bg-white border border-slate-200 text-sm text-slate-700 shadow-sm" style="border-radius: 99px">${skill}</span>`).join('')}
+                                </div>
+                            </section>
+                        </div>
+                        ${watermark}
+                    </div>
+                `;
+            } else if (currentTemplate === 'bold') {
+                templateHTML = `
+                    <div style="${dynamicStyle}; color: var(--text-main)" class="w-full h-full min-h-[1000px] bg-slate-900 text-slate-100 p-12 font-sans dark-mode relative">
+                        <div class="max-w-5xl mx-auto grid gap-12" style="grid-template-columns: var(--sidebar-w) 1fr;">
+                            <div class="space-y-8">
+                                <div>
+                                    <h1 style="font-size: ${nameSize}px; line-height: 1.1" class="font-black text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] mb-2">
+                                        ${appData.fullName.split(' ')[0]}<br/>
+                                        ${appData.fullName.split(' ').slice(1).join(' ')}
+                                    </h1>
+                                    <p class="text-xl text-slate-400 font-medium">${appData.title}</p>
+                                </div>
+                                <div class="bg-slate-800/50 p-6 backdrop-blur-sm border border-slate-700" style="border-radius: var(--radius)">
+                                    <h3 style="color: var(--primary)" class="font-bold uppercase tracking-wider text-sm mb-4">Contact</h3>
+                                    <ul class="space-y-3 text-sm text-slate-300">
+                                        ${appData.email ? `<li class="flex items-center gap-2"><i data-lucide="mail" width="14"></i> ${appData.email}</li>` : ''}
+                                        ${appData.phone ? `<li class="flex items-center gap-2"><i data-lucide="phone" width="14"></i> ${appData.phone}</li>` : ''}
+                                        ${appData.location ? `<li class="flex items-center gap-2"><i data-lucide="map-pin" width="14"></i> ${appData.location}</li>` : ''}
+                                        ${appData.website ? `<li class="flex items-center gap-2"><i data-lucide="globe" width="14"></i> ${appData.website}</li>` : ''}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 style="color: var(--primary)" class="font-bold uppercase tracking-wider text-sm mb-4">Skills</h3>
+                                    <div class="flex flex-wrap gap-2">
+                                        ${skillsList.map(skill => `<span class="px-3 py-1 bg-slate-800 text-xs font-bold text-slate-300 border border-slate-700" style="border-radius: var(--radius)">${skill}</span>`).join('')}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-12">
+                                <section>
+                                    <h2 class="text-2xl font-bold text-white mb-4 border-b border-slate-800 pb-2">About</h2>
+                                    <p class="text-slate-400 leading-relaxed text-lg text-inherit">${appData.bio}</p>
+                                </section>
+                                <section>
+                                    <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-2">Experience</h2>
+                                    <div class="space-y-8 border-l-2 border-slate-800 ml-2 pl-8 relative">
+                                        ${appData.experience.map(exp => `
+                                            <div class="relative">
+                                                <div class="absolute -left-[39px] top-1 w-5 h-5 rounded-full bg-slate-900 border-4" style="border-color: var(--primary)"></div>
+                                                <h3 class="text-xl font-bold text-white">${exp.role}</h3>
+                                                <div style="color: var(--accent)" class="font-medium mb-2">${exp.company} <span class="text-slate-600">|</span> ${exp.duration}</div>
+                                                <p class="text-slate-400 text-inherit">${exp.description}</p>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </section>
+                                <section>
+                                    <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-2">Key Projects</h2>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        ${appData.projects.map(proj => `
+                                            <div class="bg-slate-800 p-5 border border-slate-700" style="border-radius: var(--radius)">
+                                                <h3 class="font-bold text-white text-lg mb-1">${proj.name}</h3>
+                                                <p class="text-xs mb-3" style="color: var(--primary)">${proj.tech}</p>
+                                                <p class="text-sm text-slate-400 text-inherit">${proj.description}</p>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                        ${watermark}
+                    </div>
+                `;
+            } else if (currentTemplate === 'corporate') {
+                templateHTML = `
+                    <div style="${dynamicStyle}; color: var(--text-main)" class="w-full h-full min-h-[1000px] bg-white text-slate-800 max-w-[1000px] mx-auto relative">
+                        <div class="text-white p-10 flex flex-col md:flex-row justify-between items-start md:items-center" style="background-color: var(--primary)">
+                            <div>
+                                <h1 style="font-size: ${nameSize}px" class="font-bold tracking-tight">${appData.fullName}</h1>
+                                <p class="text-white/80 text-xl mt-1">${appData.title}</p>
+                            </div>
+                            <div class="mt-4 md:mt-0 text-right text-sm text-white/80 space-y-1">
+                                <p>${appData.email}</p>
+                                <p>${appData.phone}</p>
+                                <p>${appData.location}</p>
+                            </div>
+                        </div>
+                        <div class="grid" style="grid-template-columns: var(--sidebar-w) 1fr;">
+                            <div class="bg-slate-100 p-8 md:min-h-[800px]">
+                                <section class="mb-8">
+                                    <h3 style="color: var(--primary)" class="font-bold uppercase border-b-2 border-slate-300 pb-1 mb-3">Profile</h3>
+                                    <p class="text-sm text-slate-600 leading-relaxed text-inherit">${appData.bio}</p>
+                                </section>
+                                <section class="mb-8">
+                                    <h3 style="color: var(--primary)" class="font-bold uppercase border-b-2 border-slate-300 pb-1 mb-3">Contact</h3>
+                                    <div class="text-sm text-slate-600 space-y-2">
+                                        ${appData.linkedin ? `<p class="break-all"><strong>IN:</strong> ${appData.linkedin}</p>` : ''}
+                                        ${appData.github ? `<p class="break-all"><strong>GH:</strong> ${appData.github}</p>` : ''}
+                                        ${appData.website ? `<p class="break-all"><strong>Web:</strong> ${appData.website}</p>` : ''}
+                                    </div>
+                                </section>
+                                <section>
+                                    <h3 style="color: var(--primary)" class="font-bold uppercase border-b-2 border-slate-300 pb-1 mb-3">Expertise</h3>
+                                    <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                        ${skillsList.map(skill => `<li>${skill}</li>`).join('')}
+                                    </ul>
+                                </section>
+                            </div>
+                            <div class="p-10">
+                                <section style="margin-bottom: var(--spacing)">
+                                    <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                                        <i data-lucide="briefcase" style="color: var(--primary)"></i> Professional Experience
+                                    </h2>
+                                    <div class="space-y-8">
+                                        ${appData.experience.map(exp => `
+                                            <div>
+                                                <div class="flex justify-between items-baseline mb-1">
+                                                    <h3 class="text-lg font-bold text-slate-900">${exp.role}</h3>
+                                                    <span class="text-sm text-slate-500 font-medium">${exp.duration}</span>
+                                                </div>
+                                                <div class="font-medium mb-2" style="color: var(--primary)">${exp.company}</div>
+                                                <p class="text-sm leading-relaxed text-inherit">${exp.description}</p>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </section>
+                                <section>
+                                    <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                                        <i data-lucide="code" style="color: var(--primary)"></i> Notable Projects
+                                    </h2>
+                                    <div class="space-y-6">
+                                        ${appData.projects.map(proj => `
+                                            <div class="border-l-4 pl-4" style="border-color: var(--primary)">
+                                                <h3 class="font-bold text-slate-900">${proj.name}</h3>
+                                                <p class="text-xs mb-1 italic" style="color: var(--primary)">${proj.tech}</p>
+                                                <p class="text-sm text-inherit">${proj.description}</p>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                        ${watermark}
+                    </div>
+                `;
+            } else if (currentTemplate === 'creative') {
+                // New Creative Template
+                templateHTML = `
+                    <div style="${dynamicStyle}; font-family: 'Space Grotesk', sans-serif; color: var(--text-main)" class="w-full h-full bg-slate-50 text-slate-900 p-12 relative">
+                        <header class="mb-12">
+                            <h1 style="font-size: ${nameSize}px; color: var(--primary)" class="font-bold leading-none mb-4">${appData.fullName}</h1>
+                            <div class="flex flex-wrap items-center gap-4 text-sm font-medium border-b-2 border-slate-200 pb-8">
+                                <span class="bg-black text-white px-3 py-1 rounded-full">${appData.title}</span>
+                                ${appData.email ? `<span>${appData.email}</span>` : ''}
+                                ${appData.location ? `<span>${appData.location}</span>` : ''}
+                            </div>
+                        </header>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
+                            <div>
+                                <h2 style="color: var(--primary)" class="text-xl font-bold mb-4 uppercase tracking-tight">About</h2>
+                                <p class="text-lg leading-relaxed font-light text-inherit">${appData.bio}</p>
+                            </div>
+                            <div>
+                                <h2 style="color: var(--primary)" class="text-xl font-bold mb-4 uppercase tracking-tight">Skills</h2>
+                                <div class="flex flex-wrap gap-2">
+                                    ${skillsList.map(skill => `
+                                        <span class="px-4 py-2 bg-white border-2 border-black font-bold text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:shadow-none transition-all cursor-default">
+                                            ${skill}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-16">
+                            <h2 style="color: var(--primary)" class="text-xl font-bold mb-8 uppercase tracking-tight border-b-2 border-black inline-block pb-1">Work History</h2>
+                            <div class="space-y-10">
+                                ${appData.experience.map(exp => `
+                                    <div class="group">
+                                        <div class="flex flex-col md:flex-row md:items-baseline justify-between mb-2">
+                                            <h3 class="text-2xl font-bold group-hover:text-[var(--primary)] transition-colors">${exp.role}</h3>
+                                            <span class="font-mono text-sm bg-slate-200 px-2 py-1">${exp.duration}</span>
+                                        </div>
+                                        <div class="text-lg font-medium mb-3">${exp.company}</div>
+                                        <p class="max-w-2xl text-inherit">${exp.description}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div>
+                             <h2 style="color: var(--primary)" class="text-xl font-bold mb-8 uppercase tracking-tight border-b-2 border-black inline-block pb-1">Selected Projects</h2>
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                ${appData.projects.map(proj => `
+                                    <div class="bg-white border-2 border-black p-6 shadow-[8px_8px_0px_0px_rgba(var(--primary),0.2)]" style="border-radius: var(--radius)">
+                                        <h3 class="text-xl font-bold mb-2">${proj.name}</h3>
+                                        <p class="text-xs font-mono mb-4 text-[var(--accent)]">${proj.tech}</p>
+                                        <p class="text-sm text-inherit">${proj.description}</p>
+                                    </div>
+                                `).join('')}
+                             </div>
+                        </div>
+                        ${watermark}
+                    </div>
+                `;
+            } else if (currentTemplate === 'academic') {
+                // New Academic Template
+                templateHTML = `
+                    <div style="${dynamicStyle}; font-family: 'Times New Roman', Times, serif; color: var(--text-main)" class="w-full h-full bg-white text-black p-16 max-w-[210mm] relative">
+                        <header class="text-center mb-8 border-b border-black pb-4">
+                            <h1 style="font-size: ${nameSize * 0.8}px;" class="font-bold mb-2 uppercase tracking-wider">${appData.fullName}</h1>
+                            <div class="flex flex-wrap justify-center gap-4 text-sm">
+                                <span>${appData.location}</span>
+                                <span>${appData.phone}</span>
+                                <span>${appData.email}</span>
+                                <span>${appData.website}</span>
+                            </div>
+                        </header>
+
+                        <section class="mb-6">
+                            <h2 class="font-bold text-lg uppercase border-b border-black mb-3 pb-1 tracking-wider">Professional Summary</h2>
+                            <p class="text-justify leading-relaxed text-sm text-inherit">${appData.bio}</p>
+                        </section>
+
+                        <section class="mb-6">
+                            <h2 class="font-bold text-lg uppercase border-b border-black mb-3 pb-1 tracking-wider">Experience</h2>
+                            <div class="space-y-4">
+                                ${appData.experience.map(exp => `
+                                    <div>
+                                        <div class="flex justify-between font-bold text-base">
+                                            <span>${exp.company}</span>
+                                            <span>${exp.duration}</span>
+                                        </div>
+                                        <div class="italic mb-1">${exp.role}</div>
+                                        <ul class="list-disc list-inside text-sm pl-4">
+                                            <li class="text-inherit">${exp.description}</li>
+                                        </ul>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </section>
+
+                        <section class="mb-6">
+                            <h2 class="font-bold text-lg uppercase border-b border-black mb-3 pb-1 tracking-wider">Skills</h2>
+                            <p class="text-sm leading-relaxed text-inherit">
+                                <strong>Technical Skills:</strong> ${appData.skills}
+                            </p>
+                        </section>
+
+                        <section class="mb-6">
+                            <h2 class="font-bold text-lg uppercase border-b border-black mb-3 pb-1 tracking-wider">Projects</h2>
+                            <div class="space-y-4">
+                                ${appData.projects.map(proj => `
+                                    <div>
+                                        <div class="font-bold text-base">${proj.name}</div>
+                                        <div class="text-sm italic mb-1">Stack: ${proj.tech}</div>
+                                        <p class="text-sm text-inherit">${proj.description}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </section>
+                        ${watermark}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = templateHTML;
+            lucide.createIcons();
+        }
+
+        // --- PDF GENERATOR ---
+
+        function downloadPDF() {
+            const element = document.getElementById('preview-container');
+            const btn = document.getElementById('download-btn');
+            
+            // Visual feedback
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" width="16"></i> Generating...';
+            lucide.createIcons();
+
+            const opt = {
+                margin: 0,
+                filename: appData.fullName.replace(/\s+/g, '_') + '_Portfolio.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                btn.innerHTML = originalText;
+                lucide.createIcons();
+            });
+        }
+
+        // --- UPDATE LOGIC ---
+
+        function updateField(field, value) {
+            appData[field] = value;
+            renderPreview();
+        }
+
+        function updateConfig(field, value) {
+            appData.config[field] = value;
+            // Force re-render to apply new config
+            renderPreview(); 
+            // Also update the UI input text if it was a color picker or range
+            if(document.activeElement.type !== 'text' && document.activeElement.type !== 'number') {
+                 // Logic to sync inputs could go here, but simple re-render is enough for preview
+            }
+            if(currentTab === 'design') {
+               // Keep focus? rendering forms kills focus. 
+               // For design tab, we update preview but NOT the form container to avoid losing focus/input state
+            }
+        }
+
+        // Override renderForms/setTab to prevent focus loss on design inputs
+        // ... (Basic implementation keeps focus issues minimal by not re-rendering forms on input)
+
+        function updateExperience(id, field, value) {
+            appData.experience = appData.experience.map(exp => 
+                exp.id === id ? { ...exp, [field]: value } : exp
+            );
+            renderPreview();
+        }
+
+        function addExperience() {
+            const newId = Math.max(...appData.experience.map(e => e.id), 0) + 1;
+            appData.experience.push({ id: newId, role: "New Role", company: "Company", duration: "Year", description: "Description" });
+            renderForms(); // Re-render form list
+            renderPreview();
+        }
+
+        function removeExperience(id) {
+            appData.experience = appData.experience.filter(e => e.id !== id);
+            renderForms();
+            renderPreview();
+        }
+
+        function updateProject(id, field, value) {
+            appData.projects = appData.projects.map(proj => 
+                proj.id === id ? { ...proj, [field]: value } : proj
+            );
+            renderPreview();
+        }
+
+        function addProject() {
+            const newId = Math.max(...appData.projects.map(p => p.id), 0) + 1;
+            appData.projects.push({ id: newId, name: "Project Name", tech: "Tech Stack", description: "Description" });
+            renderForms();
+            renderPreview();
+        }
+
+        function removeProject(id) {
+            appData.projects = appData.projects.filter(p => p.id !== id);
+            renderForms();
+            renderPreview();
+        }
+
+        // --- UI STATE MANAGERS ---
+
+        function setTemplate(template) {
+            currentTemplate = template;
+            
+            // Update Button Styles
+            document.querySelectorAll('.template-btn').forEach(btn => {
+                btn.className = 'template-btn p-2 text-xs rounded border text-center transition-all border-slate-200 text-slate-600 hover:bg-slate-100';
+            });
+            const activeBtn = document.getElementById(`btn-${template}`);
+            if (activeBtn) {
+                 activeBtn.className = 'template-btn p-2 text-xs rounded border text-center transition-all bg-white border-indigo-500 text-indigo-600 shadow-sm ring-1 ring-indigo-500';
+            }
+
+            renderPreview();
+        }
+
+        function setTab(tab) {
+            currentTab = tab;
+            
+            // Update Tab Styles
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-indigo-600', 'text-indigo-600');
+                btn.classList.remove('text-amber-600', 'border-amber-500'); // Reset design tab specific style
+                btn.classList.add('border-transparent', 'text-slate-400');
+                
+                // Keep design tab amber hover if not active
+                if(btn.id === 'tab-design' && tab !== 'design') {
+                     btn.classList.add('text-amber-500', 'hover:text-amber-600');
+                     btn.classList.remove('text-slate-400');
+                }
+            });
+
+            const activeTabBtn = document.getElementById(`tab-${tab}`);
+            activeTabBtn.classList.remove('border-transparent', 'text-slate-400', 'text-amber-500');
+            
+            if (tab === 'design') {
+                activeTabBtn.classList.add('border-amber-500', 'text-amber-600');
+            } else {
+                activeTabBtn.classList.add('border-indigo-600', 'text-indigo-600');
+            }
+
+            renderForms();
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('editor-sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        document.getElementById('close-mobile-sidebar').addEventListener('click', toggleMobileSidebar);
+
+        // --- INIT ---
+        renderForms();
+        renderPreview();
+        lucide.createIcons();
+
+    </script>
+</body>
+</html>
